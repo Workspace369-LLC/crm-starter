@@ -2,6 +2,10 @@
 
 A small CRM built with Next.js. It uses [Workspace369](https://workspace369.com/) as the backend, over MCP. Your clients, proposals and invoices live in Workspace369. This app is a front end for them.
 
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2FWorkspace369-LLC%2Fcrm-starter&project-name=crm-starter&repository-name=crm-starter&env=W369_TOKEN&envDescription=Personal+access+token+from+Workspace369%3A+Settings+%3E+AI+connections.+Use+a+test+workspace+while+you+build.&envLink=https%3A%2F%2Fdocs.workspace369.com%2Fv%2F2026.3%2Fai-connections%2Fpersonal-access-tokens%2F)
+
+Or choose **Use this template** on GitHub to start your own copy.
+
 ![Pipeline board, light](docs/screenshots/pipeline-desktop-light-v2.png)
 
 | Dark | Phone |
@@ -49,6 +53,8 @@ The mock accepts any non-empty token. To see the approval message, start it with
 2. Copy the example env file: `cp .env.example .env.local`.
 3. Set `W369_TOKEN` in `.env.local`. Optionally set `W369_MCP_URL`. It defaults to `https://mcp.workspace369.com/mcp`.
 4. Run `npm install && npm run dev`.
+
+To deploy instead of running locally, use the **Deploy with Vercel** button at the top. It copies this repo to your GitHub account and asks for `W369_TOKEN`. The token stays a server-side environment variable.
 
 Never prefix the token with `NEXT_PUBLIC_`. Never commit `.env.local`. It is already in `.gitignore`.
 
