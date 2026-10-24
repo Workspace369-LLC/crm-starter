@@ -15,7 +15,7 @@ A small CRM built with Next.js. It uses [Workspace369](https://workspace369.com/
 - New client form with your custom fields.
 - Invoices list.
 
-It reads data and creates drafts. It never sends anything. Sending a proposal or invoice, or recording a payment, waits for approval in the Workspace369 app. If a write is held, the app shows "Awaiting approval in Workspace369." with a link.
+It reads data and creates drafts. It never sends anything or records a payment: do those in the Workspace369 app. If a write is held for approval, the app shows "Awaiting approval in Workspace369." with a link.
 
 Your token stays on the server. Only server code imports `lib/workspace369.ts` (it uses `server-only`), so the token never reaches the browser.
 
@@ -45,7 +45,7 @@ The mock accepts any non-empty token. To see the approval message, start it with
 
 ## Use a real workspace
 
-1. In Workspace369, go to Settings → AI connections and create a personal access token. Use a test workspace while you build.
+1. In Workspace369, go to Settings → AI → AI connections and create a personal access token. Use a test workspace while you build.
 2. Copy the example env file: `cp .env.example .env.local`.
 3. Set `W369_TOKEN` in `.env.local`. Optionally set `W369_MCP_URL`. It defaults to `https://mcp.workspace369.com/mcp`.
 4. Run `npm install && npm run dev`.
