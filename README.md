@@ -2,7 +2,7 @@
 
 A small CRM built with Next.js. It uses [Workspace369](https://workspace369.com/) as the backend, over MCP. Your clients, proposals and invoices live in Workspace369. This app is a front end for them.
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2FWorkspace369-LLC%2Fcrm-starter&project-name=crm-starter&repository-name=crm-starter&env=W369_TOKEN&envDescription=Personal+access+token+from+Workspace369%3A+Settings+%3E+AI+connections.+Use+a+test+workspace+while+you+build.&envLink=https%3A%2F%2Fdocs.workspace369.com%2Fv%2F2026.3%2Fai-connections%2Fpersonal-access-tokens%2F)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2FWorkspace369-LLC%2Fcrm-starter&project-name=crm-starter&repository-name=crm-starter&env=W369_TOKEN%2CAPP_PASSWORD&envDescription=W369_TOKEN%3A+a+personal+access+token+from+Workspace369+%28Settings+%3E+AI+connections%3B+use+a+test+workspace+while+you+build%29.+APP_PASSWORD%3A+the+password+you+will+use+to+open+this+app.&envLink=https%3A%2F%2Fgithub.com%2FWorkspace369-LLC%2Fcrm-starter%23deploy)
 
 Or choose **Use this template** on GitHub to start your own copy.
 
@@ -54,7 +54,14 @@ The mock accepts any non-empty token. To see the approval message, start it with
 3. Set `W369_TOKEN` in `.env.local`. Optionally set `W369_MCP_URL`. It defaults to `https://mcp.workspace369.com/mcp`.
 4. Run `npm install && npm run dev`.
 
-To deploy instead of running locally, use the **Deploy with Vercel** button at the top. It copies this repo to your GitHub account and asks for `W369_TOKEN`. The token stays a server-side environment variable.
+## Deploy
+
+Use the **Deploy with Vercel** button at the top. It copies this repo to your GitHub account and asks for two values:
+
+- `W369_TOKEN`: your personal access token. It stays a server-side environment variable.
+- `APP_PASSWORD`: the password for opening the app. Your browser asks for it once; any user name works.
+
+The token can read and change your clients, so a deployed copy always needs the password. Without `APP_PASSWORD`, the deployed app serves nothing (it shows a "Set APP_PASSWORD" message). Locally, `npm run dev` stays open when `APP_PASSWORD` is unset. The check is in `middleware.ts` and `lib/gate.ts`.
 
 Never prefix the token with `NEXT_PUBLIC_`. Never commit `.env.local`. It is already in `.gitignore`.
 
