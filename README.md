@@ -100,8 +100,10 @@ AGENTS.md          Rules for AI coding agents working in this repo
 ## Links
 
 - [Workspace369](https://workspace369.com/)
+- [Build a CRM with AI on Workspace369](https://workspace369.com/build-a-crm-with-ai/?utm_source=github-crm-starter&utm_medium=readme&utm_campaign=ai-builders-crm&utm_content=links)
 - [Build a custom CRM with an AI coding agent](https://docs.workspace369.com/v/2026.3/build-with-ai/build-a-custom-crm-with-an-ai-coding-agent/)
 - [Workspace369 MCP on GitHub](https://github.com/Workspace369-LLC/workspace369-mcp)
+- Rather have it built for you? [App369](https://app369.com/fixed-price/custom-crm-build/?utm_source=github-crm-starter&utm_medium=readme&utm_campaign=ai-builders-crm&utm_content=links) builds custom CRMs at a fixed price, quoted after a $450 scoping.
 
 ## License
 
