@@ -45,6 +45,8 @@ The mock accepts any non-empty token. To see the approval message, start it with
 
 ## Use a real workspace
 
+No Workspace369 account yet? [Start a free trial](https://app.workspace369.com/signup?utm_source=github-crm-starter&utm_medium=readme). You'll be the workspace owner, so you can turn on AI connections yourself.
+
 1. In Workspace369, go to Settings → AI → AI connections and create a personal access token. Use a test workspace while you build.
 2. Copy the example env file: `cp .env.example .env.local`.
 3. Set `W369_TOKEN` in `.env.local`. Optionally set `W369_MCP_URL`. It defaults to `https://mcp.workspace369.com/mcp`.
