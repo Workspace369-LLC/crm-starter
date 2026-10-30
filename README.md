@@ -2,7 +2,7 @@
 
 A small CRM built with Next.js. It uses [Workspace369](https://workspace369.com/) as the backend, over MCP. Your clients, proposals and invoices live in Workspace369. This app is a front end for them.
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2FWorkspace369-LLC%2Fcrm-starter&project-name=crm-starter&repository-name=crm-starter&env=W369_TOKEN%2CAPP_PASSWORD&envDescription=W369_TOKEN%3A+a+personal+access+token+from+Workspace369+%28Settings+%3E+AI+connections%3B+use+a+test+workspace+while+you+build%29.+APP_PASSWORD%3A+the+password+you+will+use+to+open+this+app.&envLink=https%3A%2F%2Fgithub.com%2FWorkspace369-LLC%2Fcrm-starter%23deploy)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2FWorkspace369-LLC%2Fcrm-starter&project-name=crm-starter&repository-name=crm-starter&env=W369_TOKEN%2CAPP_PASSWORD&envDescription=W369_TOKEN%3A+a+personal+access+token+from+Workspace369+%28Settings+%3E+AI+%3E+AI+connections%3B+use+a+test+workspace+while+you+build%29.+APP_PASSWORD%3A+the+password+you+will+use+to+open+this+app.&envLink=https%3A%2F%2Fgithub.com%2FWorkspace369-LLC%2Fcrm-starter%23deploy)
 
 Or choose **Use this template** on GitHub to start your own copy.
 
