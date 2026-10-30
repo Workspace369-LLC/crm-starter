@@ -11,7 +11,7 @@ describe("callTool", () => {
     const r = await callTool("clients_search", { query: "a" }, { token: "t", fetchImpl: f });
     expect(r).toEqual({ held: false, data: { clients: [1] } });
     const [url, init] = (f as any).mock.calls[0];
-    expect(url).toBe("https://mcp.workspace369.com/mcp");
+    expect(url).toBe("https://mcp.workspace369.com/mcp/crm");
     expect(init.headers.Authorization).toBe("Bearer t");
     expect(init.headers.Accept).toBe("application/json, text/event-stream");
     expect(JSON.parse(init.body)).toMatchObject({ method: "tools/call", params: { name: "clients_search", arguments: { query: "a" } } });

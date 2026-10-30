@@ -19,7 +19,7 @@ Or choose **Use this template** on GitHub to start your own copy.
 - New client form with your custom fields.
 - Invoices list.
 
-It reads data and creates drafts. It never sends anything. Sending a proposal or invoice, or recording a payment, waits for approval in the Workspace369 app. If a write is held, the app shows "Awaiting approval in Workspace369." with a link.
+It reads data and creates drafts. It never sends anything or records a payment: do those in the Workspace369 app. If a write is held for approval, the app shows "Awaiting approval in Workspace369." with a link.
 
 Your token stays on the server. Only server code imports `lib/workspace369.ts` (it uses `server-only`), so the token never reaches the browser.
 
@@ -49,9 +49,11 @@ The mock accepts any non-empty token. To see the approval message, start it with
 
 ## Use a real workspace
 
-1. In Workspace369, go to Settings → AI connections and create a personal access token. Use a test workspace while you build.
+No Workspace369 account yet? [Start a free trial](https://app.workspace369.com/signup?utm_source=github-crm-starter&utm_medium=readme); the trial starts when you save your card (nothing is charged for 14 days). You'll be the workspace owner, so you can turn on AI connections yourself.
+
+1. In Workspace369, go to Settings → AI → AI connections and create a personal access token. Use a test workspace while you build.
 2. Copy the example env file: `cp .env.example .env.local`.
-3. Set `W369_TOKEN` in `.env.local`. Optionally set `W369_MCP_URL`. It defaults to `https://mcp.workspace369.com/mcp`.
+3. Set `W369_TOKEN` in `.env.local`. Optionally set `W369_MCP_URL`. It defaults to `https://mcp.workspace369.com/mcp/crm`, the core CRM tools. `https://mcp.workspace369.com/mcp` is the full set of tools.
 4. Run `npm install && npm run dev`.
 
 Never prefix the token with `NEXT_PUBLIC_`. Never commit `.env.local`. It is already in `.gitignore`.
@@ -74,7 +76,7 @@ The token can read and change your clients, so a deployed copy always needs the 
 Your workspace may offer newer schemas. List them with:
 
 ```sh
-curl -s https://mcp.workspace369.com/mcp \
+curl -s https://mcp.workspace369.com/mcp/crm \
   -H "Authorization: Bearer $W369_TOKEN" \
   -H "Content-Type: application/json" \
   -H "Accept: application/json, text/event-stream" \
@@ -111,8 +113,10 @@ AGENTS.md          Rules for AI coding agents working in this repo
 ## Links
 
 - [Workspace369](https://workspace369.com/)
+- [Build a CRM with AI on Workspace369](https://workspace369.com/build-a-crm-with-ai/?utm_source=github-crm-starter&utm_medium=readme&utm_campaign=ai-builders-crm&utm_content=links)
 - [Build a custom CRM with an AI coding agent](https://docs.workspace369.com/v/2026.3/build-with-ai/build-a-custom-crm-with-an-ai-coding-agent/)
 - [Workspace369 MCP on GitHub](https://github.com/Workspace369-LLC/workspace369-mcp)
+- Rather have it built for you? [App369](https://app369.com/fixed-price/custom-crm-build/?utm_source=github-crm-starter&utm_medium=readme&utm_campaign=ai-builders-crm&utm_content=links) builds custom CRMs at a fixed price, quoted after a $450 scoping.
 
 ## License
 
