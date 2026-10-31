@@ -49,7 +49,7 @@ The mock accepts any non-empty token. To see the approval message, start it with
 
 ## Use a real workspace
 
-No Workspace369 account yet? [Start a free trial](https://app.workspace369.com/signup?utm_source=github-crm-starter&utm_medium=readme); the trial starts when you save your card (nothing is charged for 14 days). You'll be the workspace owner, so you can turn on AI connections yourself.
+No Workspace369 account yet? [Start a free trial](https://app.workspace369.com/signup?utm_source=github-crm-starter&utm_medium=readme&next=ai-connections); the trial starts when you save your card (nothing is charged for 14 days). You'll be the workspace owner, so you can turn on AI connections yourself.
 
 1. In Workspace369, go to Settings → AI → AI connections and create a personal access token. Use a test workspace while you build.
 2. Copy the example env file: `cp .env.example .env.local`.
@@ -64,7 +64,7 @@ Writes change real records and can start workflows. Try them in a test workspace
 
 Use the **Deploy with Vercel** button at the top. It copies this repo to your GitHub account and asks for two values:
 
-- `W369_TOKEN`: your personal access token. It stays a server-side environment variable. Create it in Workspace369 under Settings → AI → AI connections. No account yet? [Start a free trial](https://app.workspace369.com/signup?utm_source=github-crm-starter&utm_medium=readme&utm_content=deploy); the trial starts when you save your card (nothing is charged for 14 days).
+- `W369_TOKEN`: your personal access token. It stays a server-side environment variable. Create it in Workspace369 under Settings → AI → AI connections. No account yet? [Start a free trial](https://app.workspace369.com/signup?utm_source=github-crm-starter&utm_medium=readme&utm_content=deploy&next=ai-connections); the trial starts when you save your card (nothing is charged for 14 days).
 - `APP_PASSWORD`: the password for opening the app. Your browser asks for it once; any user name works.
 
 The token can read and change your clients, so a deployed copy always needs the password. This applies to Vercel Preview deployments too. Without `APP_PASSWORD`, a deployed app serves nothing (it shows a "Set APP_PASSWORD" message). Locally, `npm run dev` stays open when `APP_PASSWORD` is unset. The check is in `middleware.ts` and `lib/gate.ts`.
