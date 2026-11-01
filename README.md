@@ -60,6 +60,16 @@ Never prefix the token with `NEXT_PUBLIC_`. Never commit `.env.local`. It is alr
 
 Writes change real records and can start workflows. Try them in a test workspace first.
 
+## Set up your pipeline
+
+`npm run setup` adds a starter pipeline to your workspace: a few stages and client fields from `config/crm-blueprint.json` (edit it first if you like). It shows your current stages, runs a dry run, prints the preview and asks `y/N`. Only `y` applies it. It keeps your existing stages and fields and deletes nothing. It needs a token with the `clients:write` scope and an owner (or a member who can manage stages and edit business details).
+
+```sh
+npm run setup
+```
+
+With sample data, start `npm run mock` and set the mock values in `.env.local` first.
+
 ## Deploy
 
 Use the **Deploy with Vercel** button at the top. It copies this repo to your GitHub account and asks for two values:
@@ -71,7 +81,7 @@ The token can read and change your clients, so a deployed copy always needs the 
 
 ## Tools the app calls
 
-`clients_search`, `clients_get`, `clients_create`, `clients_update`, `clients_move_stage`, `workspace_schema`, `proposals_search`, `proposals_create_draft`, `invoices_search`.
+`clients_search`, `clients_get`, `clients_create`, `clients_update`, `clients_move_stage`, `workspace_schema`, `proposals_search`, `proposals_create_draft`, `invoices_search`, and, for `npm run setup` only, `crm_apply_blueprint`.
 
 Your workspace may offer newer schemas. List them with:
 
@@ -90,6 +100,7 @@ Each page reads `tools/list` and only shows a feature when the server offers it.
 ```sh
 npm run dev        # start the app
 npm run mock       # start the mock MCP server
+npm run setup      # add a starter pipeline (dry run, then y/N)
 npm test           # unit tests (mocked fetch)
 npm run typecheck  # TypeScript check
 npm run build      # production build

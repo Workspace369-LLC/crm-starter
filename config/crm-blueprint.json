@@ -1,0 +1,16 @@
+{
+  "_comment": "Starter pipeline for `npm run setup`. Edit freely: stages (max 12) and custom_fields (max 30). Existing stages and fields are kept, nothing is deleted. group: lead | client | closed. color: gray blue purple green amber red teal. field type: text select boolean number date (a select needs options).",
+  "stages": [
+    { "name": "Lead", "group": "lead", "color": "blue" },
+    { "name": "Qualified", "group": "lead", "color": "purple" },
+    { "name": "Proposal sent", "group": "lead", "color": "amber" },
+    { "name": "Active", "group": "client", "color": "green" },
+    { "name": "Lost", "group": "closed", "color": "gray" }
+  ],
+  "custom_fields": [
+    { "label": "Budget", "type": "number" },
+    { "label": "Preferred contact", "type": "select", "options": ["Email", "Phone", "Text"] },
+    { "label": "Referred by", "type": "text" },
+    { "label": "Decision date", "type": "date" }
+  ]
+}
