@@ -25,7 +25,7 @@ import { FollowUpPanel, followUpView } from "@/app/clients/[id]/followups";
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 
 const ALL = ["pipeline_summary", "follow_ups_list", "follow_ups_create", "follow_ups_complete"].map((name) => ({ name }));
-const off: Capabilities = { moveStage: false, customFields: false, pipelineSummary: false, followUps: false, followUpCreate: false, followUpComplete: false };
+const off: Capabilities = { moveStage: false, customFields: false, pipelineSummary: false, followUps: false, followUpsByClient: false, followUpCreate: false, followUpComplete: false };
 const on: Capabilities = { ...off, pipelineSummary: true, followUps: true, followUpCreate: true, followUpComplete: true };
 
 const summary: PipelineSummary = {
@@ -56,11 +56,30 @@ describe("read helpers degrade quietly", () => {
   });
   it("getNextFollowUp picks this client's item from the list, and null otherwise", async () => {
     replies.follow_ups_list = { items: [chase, reminder] };
-    expect(await getNextFollowUp("c1")).toEqual(reminder);
+    expect(await getNextFollowUp("c1")).toEqual({ next: reminder, incomplete: false });
     expect(calls[0]).toEqual({ name: "follow_ups_list", args: { limit: 100 } });
-    expect(await getNextFollowUp("nobody")).toBeNull();
+    // a short page without `truncated` is the whole list: the client really has none
+    expect(await getNextFollowUp("nobody")).toEqual({ next: null, incomplete: false });
+  });
+  it("scan fallback: a full page or truncated:true means \"may be incomplete\", not \"none\"", async () => {
+    replies.follow_ups_list = { items: [chase], truncated: true };
+    expect(await getNextFollowUp("c1")).toEqual({ next: null, incomplete: true });
+    replies.follow_ups_list = { items: Array.from({ length: 100 }, (_, i) => ({ ...chase, client_id: `x${i}` })), truncated: false };
+    expect(await getNextFollowUp("c1")).toEqual({ next: null, incomplete: true });
     failing.add("follow_ups_list");
-    expect(await getNextFollowUp("c1")).toBeNull();
+    expect(await getNextFollowUp("c1")).toEqual({ next: null, incomplete: true });
+  });
+  it("with a client_id filter in the schema it asks for just that client", async () => {
+    replies.follow_ups_list = { items: [reminder] };
+    expect(await getNextFollowUp("c1", true)).toEqual({ next: reminder, incomplete: false });
+    expect(calls[0]).toEqual({ name: "follow_ups_list", args: { client_id: "c1", limit: 1 } });
+    replies.follow_ups_list = { items: [], truncated: false };
+    expect(await getNextFollowUp("c9", true)).toEqual({ next: null, incomplete: false });
+  });
+  it("detects the client_id filter from the tools/list schema", () => {
+    expect(capabilitiesFromTools([{ name: "follow_ups_list", inputSchema: { properties: { limit: {}, client_id: {} } } }]).followUpsByClient).toBe(true);
+    expect(capabilitiesFromTools([{ name: "follow_ups_list", inputSchema: { properties: { limit: {} } } }]).followUpsByClient).toBe(false);
+    expect(capabilitiesFromTools([{ name: "follow_ups_list" }]).followUpsByClient).toBe(false);
   });
 });
 
@@ -125,5 +144,8 @@ describe("render", () => {
   });
   it("shows an empty state when there is no next follow-up", () => {
     expect(renderToStaticMarkup(createElement(FollowUpPanel, { clientId: "c1", caps: on, next: null }))).toContain("No follow-up scheduled.");
+    const maybe = renderToStaticMarkup(createElement(FollowUpPanel, { clientId: "c1", caps: on, next: null, incomplete: true }));
+    expect(maybe).toContain("may be incomplete");
+    expect(maybe).not.toContain("No follow-up scheduled.");
   });
 });

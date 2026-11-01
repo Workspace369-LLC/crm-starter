@@ -131,13 +131,15 @@ export type Capabilities = {
   pipelineSummary: boolean;
   /** follow_ups_list is in tools/list (next follow-up on the client page). */
   followUps: boolean;
+  /** follow_ups_list accepts `client_id` (returns just that client's next follow-up). */
+  followUpsByClient: boolean;
   /** follow_ups_create is in tools/list. */
   followUpCreate: boolean;
   /** follow_ups_complete is in tools/list. */
   followUpComplete: boolean;
 };
 
-const NO_CAPABILITIES: Capabilities = { moveStage: false, customFields: false, pipelineSummary: false, followUps: false, followUpCreate: false, followUpComplete: false };
+const NO_CAPABILITIES: Capabilities = { moveStage: false, customFields: false, pipelineSummary: false, followUps: false, followUpsByClient: false, followUpCreate: false, followUpComplete: false };
 
 /** Pure: derive capabilities from a tools/list result. */
 export function capabilitiesFromTools(tools: ToolInfo[]): Capabilities {
@@ -149,6 +151,7 @@ export function capabilitiesFromTools(tools: ToolInfo[]): Capabilities {
       !!byName.get("clients_create")?.inputSchema?.properties && "custom_fields" in (byName.get("clients_create")!.inputSchema!.properties!),
     pipelineSummary: byName.has("pipeline_summary"),
     followUps: byName.has("follow_ups_list"),
+    followUpsByClient: !!byName.get("follow_ups_list")?.inputSchema?.properties && "client_id" in byName.get("follow_ups_list")!.inputSchema!.properties!,
     followUpCreate: byName.has("follow_ups_create"),
     followUpComplete: byName.has("follow_ups_complete"),
   };
@@ -199,16 +202,27 @@ export async function getPipelineSummary(): Promise<PipelineSummary | null> {
   }
 }
 
+/** A client's next follow-up. `incomplete` means "could not tell": show that instead of "no follow-up". */
+export type NextFollowUp = { next: FollowUp | null; incomplete: boolean };
+
 /**
- * A client's next follow-up. follow_ups_list has no client filter and returns one item per client,
- * so read the first page (max 100) and pick this client's. Null when there is none (or the read failed).
+ * A client's next follow-up. When follow_ups_list accepts `client_id` (`byClient`), ask for just that client.
+ * Otherwise read the first page (max 100, one item per client) and pick this client's; if the page was full
+ * or the server said `truncated`, a missing client is "may be incomplete", not "none". A failed read is incomplete too.
  */
-export async function getNextFollowUp(clientId: string): Promise<FollowUp | null> {
+export async function getNextFollowUp(clientId: string, byClient = false): Promise<NextFollowUp> {
   try {
-    const d = await readTool<{ items?: FollowUp[] }>("follow_ups_list", { limit: 100 });
-    return d?.items?.find((i) => i.client_id === clientId) ?? null;
+    const d = await readTool<{ items?: FollowUp[]; truncated?: boolean }>(
+      "follow_ups_list",
+      byClient ? { client_id: clientId, limit: 1 } : { limit: 100 },
+    );
+    const items = d?.items ?? [];
+    const next = items.find((i) => i.client_id === clientId) ?? null;
+    if (next) return { next, incomplete: false };
+    if (byClient) return { next: null, incomplete: false };
+    return { next: null, incomplete: d?.truncated === true || items.length >= 100 };
   } catch {
-    return null;
+    return { next: null, incomplete: true };
   }
 }
 

@@ -18,7 +18,7 @@ export function followUpView(caps: Capabilities, next: FollowUp | null) {
 export const dueLabel = (iso: string) => (iso ? iso.slice(0, 10) : "");
 
 /** Next follow-up for a client, with Schedule and Mark done buttons. Each part hides when its tool is not in tools/list. */
-export function FollowUpPanel({ clientId, caps, next }: { clientId: string; caps: Capabilities; next: FollowUp | null }) {
+export function FollowUpPanel({ clientId, caps, next, incomplete = false }: { clientId: string; caps: Capabilities; next: FollowUp | null; incomplete?: boolean }) {
   const v = followUpView(caps, next);
   if (!v.panel) return null;
   return (
@@ -36,7 +36,7 @@ export function FollowUpPanel({ clientId, caps, next }: { clientId: string; caps
           </div>
           {v.canComplete && <CompleteFollowUpForm clientId={clientId} followUpId={next.source_ref!.id} />}
         </div>
-      ) : <p className="none">No follow-up scheduled.</p>)}
+      ) : <p className="none">{incomplete ? "Next follow-up may be incomplete. Check the Workspace369 app." : "No follow-up scheduled."}</p>)}
       {v.canCreate && <div className="panelbody"><ScheduleFollowUpForm clientId={clientId} /></div>}
     </section>
   );

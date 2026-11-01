@@ -55,7 +55,7 @@ describe("capabilities from tools/list", () => {
     toolsList = [{ name: "clients_move_stage" }];
     expect(await getCapabilities()).toMatchObject({ moveStage: true, customFields: false });
     toolsListFails = true;
-    expect(await getCapabilities()).toEqual({ moveStage: false, customFields: false, pipelineSummary: false, followUps: false, followUpCreate: false, followUpComplete: false });
+    expect(await getCapabilities()).toEqual({ moveStage: false, customFields: false, pipelineSummary: false, followUps: false, followUpsByClient: false, followUpCreate: false, followUpComplete: false });
   });
 });
 

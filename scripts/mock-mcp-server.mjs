@@ -5,12 +5,14 @@
 // Run: node scripts/mock-mcp-server.mjs   (PORT=4010 by default)
 // Then: W369_TOKEN=mock-token W369_MCP_URL=http://localhost:4010/mcp npm run dev
 // Optional: MOCK_HOLD_WRITES=1 answers every write with a held_for_approval result.
+// Optional: MOCK_NO_CLIENT_FILTER=1 makes follow_ups_list ignore client_id (it is not in its schema), like a server without the filter.
 // Optional: MOCK_OMIT_TOOLS=pipeline_summary,follow_ups_list hides tools (an older server or a scoped token), to try the feature-detect.
 import http from "node:http";
 import { randomUUID } from "node:crypto";
 
 const PORT = Number(process.env.PORT ?? 4010);
 const HOLD = process.env.MOCK_HOLD_WRITES === "1";
+const NO_CLIENT_FILTER = process.env.MOCK_NO_CLIENT_FILTER === "1";
 const OMIT = new Set((process.env.MOCK_OMIT_TOOLS ?? "").split(",").map((x) => x.trim()).filter(Boolean));
 const DAY = 86_400_000;
 const now = Date.now();
@@ -254,12 +256,12 @@ const TOOLS = {
       stalled: { days, count: stalled.length, clients: stalled.slice(0, 10).map((c) => ({ id: c.id, name: c.name })) },
     }, `${live.length} clients across ${STAGES.length} stages; ${stalled.length} stalled for ${days}+ days.`);
   } },
-  follow_ups_list: { props: ["scope", "group", "limit"], run(a) {
+  follow_ups_list: { get props() { return NO_CLIENT_FILTER ? ["scope", "group", "limit"] : ["scope", "group", "limit", "client_id"]; }, run(a) {
     const extra = strict(a, this.props); if (extra.length) return fail(`Invalid input: unknown field ${extra[0]}.`);
     const nameOf = (id) => clients.get(id)?.name ?? "";
     const items = [];
     for (const c of clients.values()) {
-      if (c.archived) continue;
+      if (c.archived || (a.client_id && c.id !== a.client_id)) continue;
       const mine = reminders.filter((r) => r.client_id === c.id && !r.done).sort((x, y) => x.due - y.due)[0];
       const next = mine ? { title: mine.title, reason: `Reminder: ${mine.title}`, type: "reminder", source: "reminder", source_ref: { kind: "reminder", id: mine.id }, due: mine.due, channel: mine.channel } : chases.get(c.id);
       const group = next && groupOf(next.due);
@@ -269,7 +271,7 @@ const TOOLS = {
     const wanted = a.group === "due" ? ["overdue", "today"] : a.group ? [a.group] : null;
     const shown = items.filter((i) => !wanted || wanted.includes(i.group)).slice(0, Math.min(Number(a.limit ?? 25), 100));
     const counts = Object.fromEntries(["overdue", "today", "this_week", "suggested"].map((g) => [g, items.filter((i) => i.group === g).length]));
-    return ok({ items: shown, counts, time_zone: "America/Los_Angeles", truncated: false }, `${shown.length} follow-ups.`);
+    return ok({ items: shown, counts, time_zone: "America/Los_Angeles", truncated: shown.length < items.filter((i) => !wanted || wanted.includes(i.group)).length }, `${shown.length} follow-ups.`);
   } },
   follow_ups_create: { write: true, props: ["client_id", "title", "due", "note", "channel", "idempotency_key"], run(a) {
     const extra = strict(a, this.props); if (extra.length) return fail(`Invalid input: unknown field ${extra[0]}. No change was made.`);

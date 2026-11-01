@@ -18,7 +18,7 @@ export default async function ClientPage({ params }: { params: Promise<{ id: str
   const [defs, stages, nextFollowUp] = await Promise.all([
     caps.customFields ? getCustomFieldDefs().catch(() => null) : null,
     getClientStages().catch(() => null),
-    caps.followUps ? getNextFollowUp(id) : null, // hidden when follow_ups_list is not offered
+    caps.followUps ? getNextFollowUp(id, caps.followUpsByClient) : null, // hidden when follow_ups_list is not offered
   ]);
   const stage = stages?.find((s) => s.id === client.stage_id);
   return (
@@ -50,7 +50,7 @@ export default async function ClientPage({ params }: { params: Promise<{ id: str
         </section>
       )}
 
-      <FollowUpPanel clientId={id} caps={caps} next={nextFollowUp} />
+      <FollowUpPanel clientId={id} caps={caps} next={nextFollowUp?.next ?? null} incomplete={nextFollowUp?.incomplete ?? false} />
 
       <section className="panel">
         <div className="panelhead"><h2>Proposals</h2></div>
