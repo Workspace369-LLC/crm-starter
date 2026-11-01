@@ -1,10 +1,11 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getCapabilities, getClient, getClientStages, getCustomFieldDefs, listInvoices, listProposals } from "@/lib/crm";
+import { getCapabilities, getClient, getClientStages, getCustomFieldDefs, getNextFollowUp, listInvoices, listProposals } from "@/lib/crm";
 import { initials, money, phoneLabel, pillClass, statusLabel } from "../../status";
 import { CustomFieldInputs } from "../custom-fields";
 import { CustomFieldsForm } from "../forms";
 import { DraftForm } from "./draft-form";
+import { FollowUpPanel } from "./followups";
 
 export const dynamic = "force-dynamic";
 
@@ -14,9 +15,10 @@ export default async function ClientPage({ params }: { params: Promise<{ id: str
   if (!client) notFound();
   // Custom fields are hidden when clients_update does not accept them. clients_get returns the current values.
   const caps = await getCapabilities();
-  const [defs, stages] = await Promise.all([
+  const [defs, stages, nextFollowUp] = await Promise.all([
     caps.customFields ? getCustomFieldDefs().catch(() => null) : null,
     getClientStages().catch(() => null),
+    caps.followUps ? getNextFollowUp(id) : null, // hidden when follow_ups_list is not offered
   ]);
   const stage = stages?.find((s) => s.id === client.stage_id);
   return (
@@ -47,6 +49,8 @@ export default async function ClientPage({ params }: { params: Promise<{ id: str
           </div>
         </section>
       )}
+
+      <FollowUpPanel clientId={id} caps={caps} next={nextFollowUp} />
 
       <section className="panel">
         <div className="panelhead"><h2>Proposals</h2></div>

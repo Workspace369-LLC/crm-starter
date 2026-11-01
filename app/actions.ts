@@ -1,6 +1,6 @@
 "use server";
 import { revalidatePath } from "next/cache";
-import { coerceCustomFields, createClient, draftProposal, getCustomFieldDefs, moveClientStage, updateClientCustomFields } from "@/lib/crm";
+import { coerceCustomFields, completeFollowUp, createClient, createFollowUp, draftProposal, getCustomFieldDefs, moveClientStage, updateClientCustomFields } from "@/lib/crm";
 
 export type DraftState = { message: string; approvalUrl?: string; href?: string } | null;
 
@@ -78,5 +78,37 @@ export async function draftProposalAction(_prev: DraftState, form: FormData): Pr
     return { message: "Draft created. Review and send it in the Workspace369 app." };
   } catch (e) {
     return { message: e instanceof Error ? e.message : "Failed to create draft." };
+  }
+}
+
+const CHANNELS = ["email", "sms", "call", "meeting"] as const;
+
+export async function createFollowUpAction(_prev: DraftState, form: FormData): Promise<DraftState> {
+  const clientId = String(form.get("clientId") ?? "");
+  const title = String(form.get("title") ?? "").trim();
+  const due = String(form.get("due") ?? "").trim();
+  if (!clientId || !title || !due) return { message: "Add what to do and a due date." };
+  const channel = CHANNELS.find((c) => c === form.get("channel"));
+  try {
+    const r = await createFollowUp({ client_id: clientId, title, due, ...(channel ? { channel } : {}) }, String(form.get("key") ?? "") || undefined);
+    revalidatePath(`/clients/${clientId}`);
+    if (r.held) return { message: AWAITING, approvalUrl: r.approval.approval_url };
+    return { message: "Follow-up scheduled." };
+  } catch (e) {
+    return { message: e instanceof Error ? e.message : "Failed to schedule." };
+  }
+}
+
+export async function completeFollowUpAction(_prev: DraftState, form: FormData): Promise<DraftState> {
+  const clientId = String(form.get("clientId") ?? "");
+  const followUpId = String(form.get("followUpId") ?? "");
+  if (!clientId || !followUpId) return { message: "Missing follow-up." };
+  try {
+    const r = await completeFollowUp(clientId, followUpId);
+    revalidatePath(`/clients/${clientId}`);
+    if (r.held) return { message: AWAITING, approvalUrl: r.approval.approval_url };
+    return { message: "Marked done." };
+  } catch (e) {
+    return { message: e instanceof Error ? e.message : "Failed to complete." };
   }
 }

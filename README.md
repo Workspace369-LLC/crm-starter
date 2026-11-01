@@ -18,6 +18,7 @@ Or choose **Use this template** on GitHub to start your own copy.
 - Client page: see proposals and invoices, edit custom fields, and start a draft proposal.
 - New client form with your custom fields.
 - Invoices list.
+- Pipeline header on the client list (clients per stage, new, stalled) and a next follow-up on the client page, with Schedule and Mark done. Each part only shows when your server offers its tool.
 
 It reads data and creates drafts. It never sends anything or records a payment: do those in the Workspace369 app. If a write is held for approval, the app shows "Awaiting approval in Workspace369." with a link.
 
@@ -45,7 +46,7 @@ Then run the app and open http://localhost:3000:
 npm run dev
 ```
 
-The mock accepts any non-empty token. To see the approval message, start it with `MOCK_HOLD_WRITES=1 npm run mock`. Every write then comes back as held.
+The mock accepts any non-empty token. To try an older server or a scoped token, start it with `MOCK_OMIT_TOOLS=pipeline_summary,follow_ups_list npm run mock`; the matching UI disappears. To see the approval message, start it with `MOCK_HOLD_WRITES=1 npm run mock`. Every write then comes back as held.
 
 ## Use a real workspace
 
@@ -81,7 +82,7 @@ The token can read and change your clients, so a deployed copy always needs the 
 
 ## Tools the app calls
 
-`clients_search`, `clients_get`, `clients_create`, `clients_update`, `clients_move_stage`, `workspace_schema`, `proposals_search`, `proposals_create_draft`, `invoices_search`, and, for `npm run setup` only, `crm_apply_blueprint`.
+`clients_search`, `clients_get`, `clients_create`, `clients_update`, `clients_move_stage`, `workspace_schema`, `proposals_search`, `proposals_create_draft`, `invoices_search`, `pipeline_summary`, `follow_ups_list`, `follow_ups_create`, `follow_ups_complete`, and, for `npm run setup` only, `crm_apply_blueprint`.
 
 Your workspace may offer newer schemas. List them with:
 

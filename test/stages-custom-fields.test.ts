@@ -43,19 +43,19 @@ describe("capabilities from tools/list", () => {
       { name: "clients_move_stage" },
       { name: "clients_create", inputSchema: withCf },
       { name: "clients_update", inputSchema: withCf },
-    ])).toEqual({ moveStage: true, customFields: true });
+    ])).toMatchObject({ moveStage: true, customFields: true });
   });
   it("hides both when the server lacks the stage and custom field tools", () => {
     expect(capabilitiesFromTools([
       { name: "clients_create", inputSchema: { properties: { name: {} } } },
       { name: "clients_update", inputSchema: { properties: { id: {} } } },
-    ])).toEqual({ moveStage: false, customFields: false });
+    ])).toMatchObject({ moveStage: false, customFields: false });
   });
   it("getCapabilities reads tools/list and degrades to off if it fails", async () => {
     toolsList = [{ name: "clients_move_stage" }];
-    expect(await getCapabilities()).toEqual({ moveStage: true, customFields: false });
+    expect(await getCapabilities()).toMatchObject({ moveStage: true, customFields: false });
     toolsListFails = true;
-    expect(await getCapabilities()).toEqual({ moveStage: false, customFields: false });
+    expect(await getCapabilities()).toEqual({ moveStage: false, customFields: false, pipelineSummary: false, followUps: false, followUpCreate: false, followUpComplete: false });
   });
 });
 
