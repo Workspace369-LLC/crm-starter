@@ -2,7 +2,7 @@
 
 A small CRM built with Next.js. It uses [Workspace369](https://workspace369.com/) as the backend, over MCP. Your clients, proposals and invoices live in Workspace369. This app is a front end for them.
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2FWorkspace369-LLC%2Fcrm-starter&project-name=crm-starter&repository-name=crm-starter&env=W369_TOKEN%2CAPP_PASSWORD&envDescription=W369_TOKEN%3A+a+personal+access+token+from+Workspace369+%28Settings+%3E+AI+connections%3B+use+a+test+workspace+while+you+build%29.+APP_PASSWORD%3A+the+password+you+will+use+to+open+this+app.&envLink=https%3A%2F%2Fgithub.com%2FWorkspace369-LLC%2Fcrm-starter%23deploy)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2FWorkspace369-LLC%2Fcrm-starter&project-name=crm-starter&repository-name=crm-starter&env=W369_TOKEN%2CAPP_PASSWORD&envDescription=W369_TOKEN%3A+a+personal+access+token+from+Workspace369+%28Settings+%3E+AI+%3E+AI+connections%3B+use+a+test+workspace+while+you+build%29.+APP_PASSWORD%3A+the+password+you+will+use+to+open+this+app.&envLink=https%3A%2F%2Fgithub.com%2FWorkspace369-LLC%2Fcrm-starter%23deploy)
 
 Or choose **Use this template** on GitHub to start your own copy.
 
@@ -64,7 +64,7 @@ Writes change real records and can start workflows. Try them in a test workspace
 
 Use the **Deploy with Vercel** button at the top. It copies this repo to your GitHub account and asks for two values:
 
-- `W369_TOKEN`: your personal access token. It stays a server-side environment variable.
+- `W369_TOKEN`: your personal access token. It stays a server-side environment variable. Create it in Workspace369 under Settings → AI → AI connections. No account yet? [Start a free trial](https://app.workspace369.com/signup?utm_source=github-crm-starter&utm_medium=readme&utm_content=deploy&next=ai-connections); the trial starts when you save your card (nothing is charged for 14 days).
 - `APP_PASSWORD`: the password for opening the app. Your browser asks for it once; any user name works.
 
 The token can read and change your clients, so a deployed copy always needs the password. This applies to Vercel Preview deployments too. Without `APP_PASSWORD`, a deployed app serves nothing (it shows a "Set APP_PASSWORD" message). Locally, `npm run dev` stays open when `APP_PASSWORD` is unset. The check is in `middleware.ts` and `lib/gate.ts`.
