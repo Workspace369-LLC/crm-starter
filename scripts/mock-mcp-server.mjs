@@ -179,6 +179,49 @@ const TOOLS = {
       ? { type, stages: { available: true, items: STAGES }, custom_field_definitions: { available: true, items: FIELDS } } : { type }),
       notes: ["Mock workspace: Apex Auto Spa."] }, "Schema for clients.");
   } },
+  /** Mirrors crm_apply_blueprint: dry_run defaults to true; all or nothing; keeps existing; deletes nothing. */
+  crm_apply_blueprint: { props: ["stages", "custom_fields", "dry_run"], run(a) {
+    const extra = strict(a, TOOLS.crm_apply_blueprint.props); if (extra.length) return fail(`Invalid input: unknown field ${extra[0]}. No change was made.`);
+    if (process.env.MOCK_DENY_BLUEPRINT === "1") return fail("You do not have permission for this blueprint (needs clients.manage_stages, business_details.edit). Ask a workspace admin. No change was made.");
+    const stages = a.stages ?? [], fields = a.custom_fields ?? [];
+    if (!Array.isArray(stages) || !Array.isArray(fields) || (stages.length === 0 && fields.length === 0)) return fail("Invalid input: Give `stages` (up to 12) and/or `custom_fields` (up to 30). No change was made.");
+    if (stages.length > 12) return fail("Invalid input: stages: at most 12. No change was made.");
+    if (fields.length > 30) return fail("Invalid input: custom_fields: at most 30. No change was made.");
+    const snake = (t) => String(t).trim().toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "");
+    const stagePlan = [], fieldPlan = [], seen = new Set();
+    for (const s of stages) {
+      const id = s.id ?? snake(s.name);
+      if (!s.name || !id) return fail("Invalid input: every stage needs a name. No change was made.");
+      if (seen.has(id)) return fail(`Duplicate stage "${s.name}". No change was made.`); seen.add(id);
+      const existing = STAGES.find((x) => x.id === id || x.name.toLowerCase() === String(s.name).toLowerCase());
+      stagePlan.push({ id: existing?.id ?? id, name: existing?.name ?? s.name, group: existing?.group ?? s.group ?? "client", color: s.color ?? "gray", order: stagePlan.length, action: existing ? "exists" : "create" });
+    }
+    const keys = new Set();
+    for (const f of fields) {
+      const key = f.key ?? snake(f.label);
+      if (!f.label || !key) return fail("Invalid input: every custom field needs a label. No change was made.");
+      if (!["text", "select", "boolean", "number", "date"].includes(f.type)) return fail(`Invalid input: custom field "${f.label}" has an unknown type. No change was made.`);
+      if (f.type === "select" && !(f.options?.length > 0)) return fail(`Custom field "${f.label}" is a select and needs options. No change was made.`);
+      if (keys.has(key)) return fail(`Duplicate custom field key "${key}". No change was made.`); keys.add(key);
+      const existing = FIELDS.find((x) => x.key === key);
+      if (existing && existing.type !== f.type) return fail(`Custom field "${key}" already exists as ${existing.type}; a type change is refused. No change was made.`);
+      fieldPlan.push({ key, label: existing?.label ?? f.label, type: f.type, options: f.options ?? [], action: existing ? "exists" : "create" });
+    }
+    const counts = {
+      stages_to_create: stagePlan.filter((s) => s.action === "create").length, stages_existing: stagePlan.filter((s) => s.action === "exists").length,
+      fields_to_create: fieldPlan.filter((f) => f.action === "create").length, fields_existing: fieldPlan.filter((f) => f.action === "exists").length,
+    };
+    const dryRun = a.dry_run !== false;
+    if (!dryRun) {
+      for (const s of stagePlan) if (s.action === "create") STAGES.push({ id: s.id, name: s.name, group: s.group });
+      for (const f of fieldPlan) if (f.action === "create") FIELDS.push({ id: `cf_${f.key}`, key: f.key, label: f.label, type: f.type, options: f.options });
+    }
+    const total = counts.stages_to_create + counts.fields_to_create;
+    const lead = dryRun ? "Preview only, nothing was written." : total > 0 ? "Done." : "Nothing to change.";
+    const tail = dryRun && total > 0 ? " Call again with dry_run false to apply it." : "";
+    return ok({ dry_run: dryRun, applied: !dryRun, stages: stagePlan, custom_fields: fieldPlan, counts, default_stages_added: false, warnings: [] },
+      `${lead} ${counts.stages_to_create} stage(s) ${dryRun ? "to create" : "created"}, ${counts.stages_existing} already there; ${counts.fields_to_create} custom field(s) ${dryRun ? "to create" : "created"}, ${counts.fields_existing} already there.${tail}`);
+  } },
   proposals_search: { props: ["clientId", "limit", "cursor"], run(a) {
     return page(proposals.filter((p) => !a.clientId || p.client_id === a.clientId), a, "proposals");
   } },

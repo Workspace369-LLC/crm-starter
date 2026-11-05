@@ -15,7 +15,8 @@
     "start": "next start",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
-    "mock": "node scripts/mock-mcp-server.mjs"
+    "mock": "node scripts/mock-mcp-server.mjs",
+    "setup": "node scripts/setup.mjs"
   },
   "dependencies": {
     "next": "15.5.28",
