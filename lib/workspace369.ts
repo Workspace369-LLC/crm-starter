@@ -6,7 +6,7 @@ import "server-only";
  * must stay on the server.
  */
 
-const DEFAULT_URL = "https://mcp.workspace369.com/mcp";
+const DEFAULT_URL = "https://mcp.workspace369.com/mcp/crm";
 
 export class W369Error extends Error {
   constructor(message: string, readonly kind: "http" | "rpc" | "tool" | "config", readonly status?: number) {

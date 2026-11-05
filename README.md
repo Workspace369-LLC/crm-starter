@@ -53,7 +53,7 @@ No Workspace369 account yet? [Start a free trial](https://app.workspace369.com/s
 
 1. In Workspace369, go to Settings → AI → AI connections and create a personal access token. Use a test workspace while you build.
 2. Copy the example env file: `cp .env.example .env.local`.
-3. Set `W369_TOKEN` in `.env.local`. Optionally set `W369_MCP_URL`. It defaults to `https://mcp.workspace369.com/mcp`.
+3. Set `W369_TOKEN` in `.env.local`. Optionally set `W369_MCP_URL`. It defaults to `https://mcp.workspace369.com/mcp/crm`, the core CRM tools. `https://mcp.workspace369.com/mcp` is the full set of tools.
 4. Run `npm install && npm run dev`.
 
 Never prefix the token with `NEXT_PUBLIC_`. Never commit `.env.local`. It is already in `.gitignore`.
@@ -76,7 +76,7 @@ The token can read and change your clients, so a deployed copy always needs the 
 Your workspace may offer newer schemas. List them with:
 
 ```sh
-curl -s https://mcp.workspace369.com/mcp \
+curl -s https://mcp.workspace369.com/mcp/crm \
   -H "Authorization: Bearer $W369_TOKEN" \
   -H "Content-Type: application/json" \
   -H "Accept: application/json, text/event-stream" \
