@@ -127,7 +127,19 @@ export type Capabilities = {
   moveStage: boolean;
   /** clients_create accepts `custom_fields`. */
   customFields: boolean;
+  /** pipeline_summary is in tools/list (client list header). */
+  pipelineSummary: boolean;
+  /** follow_ups_list is in tools/list (next follow-up on the client page). */
+  followUps: boolean;
+  /** follow_ups_list accepts `client_id` (returns just that client's next follow-up). */
+  followUpsByClient: boolean;
+  /** follow_ups_create is in tools/list. */
+  followUpCreate: boolean;
+  /** follow_ups_complete is in tools/list. */
+  followUpComplete: boolean;
 };
+
+const NO_CAPABILITIES: Capabilities = { moveStage: false, customFields: false, pipelineSummary: false, followUps: false, followUpsByClient: false, followUpCreate: false, followUpComplete: false };
 
 /** Pure: derive capabilities from a tools/list result. */
 export function capabilitiesFromTools(tools: ToolInfo[]): Capabilities {
@@ -137,21 +149,94 @@ export function capabilitiesFromTools(tools: ToolInfo[]): Capabilities {
     customFields:
       !!byName.get("clients_update")?.inputSchema?.properties && "custom_fields" in (byName.get("clients_update")!.inputSchema!.properties!) &&
       !!byName.get("clients_create")?.inputSchema?.properties && "custom_fields" in (byName.get("clients_create")!.inputSchema!.properties!),
+    pipelineSummary: byName.has("pipeline_summary"),
+    followUps: byName.has("follow_ups_list"),
+    followUpsByClient: !!byName.get("follow_ups_list")?.inputSchema?.properties && "client_id" in byName.get("follow_ups_list")!.inputSchema!.properties!,
+    followUpCreate: byName.has("follow_ups_create"),
+    followUpComplete: byName.has("follow_ups_complete"),
   };
 }
 
-/** If tools/list itself fails, hide both features rather than break the pages. */
+/** If tools/list itself fails, hide every optional feature rather than break the pages. */
 export async function getCapabilities(): Promise<Capabilities> {
   try {
     return capabilitiesFromTools(await listTools());
   } catch {
-    return { moveStage: false, customFields: false };
+    return NO_CAPABILITIES;
   }
 }
 
 /** Move a client to a stage (id or name). Write tool: may come back held for approval. */
 export function moveClientStage(id: string, stage: string): Promise<CallResult<MovedClient>> {
   return callTool("clients_move_stage", { id, stage });
+}
+
+/** pipeline_summary: counts can be null when the server could not count them. */
+export type PipelineSummary = {
+  stages: { id: string; name: string; group: string; client_count: number | null }[];
+  total_clients: number | null;
+  new_clients: { last_7_days: number | null; last_30_days: number | null };
+  stalled: { days: number; count: number | null; count_is_lower_bound?: boolean; clients: { id: string; name: string }[] };
+};
+/** One client's next follow-up (follow_ups_list). `source_ref.kind` is "reminder" for the ones follow_ups_complete can close. */
+export type FollowUp = {
+  client_id: string;
+  client_name: string;
+  group: "overdue" | "today" | "this_week" | "suggested";
+  type: string;
+  title: string;
+  reason: string;
+  due_at: string;
+  channel?: string;
+  source: string;
+  source_ref?: { kind: string; id: string };
+};
+
+/** Header numbers for the client list. Null when the call fails or the caller may not read them: the header is simply hidden. */
+export async function getPipelineSummary(): Promise<PipelineSummary | null> {
+  try {
+    const d = await readTool<PipelineSummary | undefined>("pipeline_summary", {});
+    return d?.stages ? d : null;
+  } catch {
+    return null;
+  }
+}
+
+/** A client's next follow-up. `incomplete` means "could not tell": show that instead of "no follow-up". */
+export type NextFollowUp = { next: FollowUp | null; incomplete: boolean };
+
+/**
+ * A client's next follow-up. When follow_ups_list accepts `client_id` (`byClient`), ask for just that client.
+ * Otherwise read the first page (max 100, one item per client) and pick this client's; if the page was full
+ * or the server said `truncated`, a missing client is "may be incomplete", not "none". A failed read is incomplete too.
+ */
+export async function getNextFollowUp(clientId: string, byClient = false): Promise<NextFollowUp> {
+  try {
+    const d = await readTool<{ items?: FollowUp[]; truncated?: boolean }>(
+      "follow_ups_list",
+      byClient ? { client_id: clientId, limit: 1 } : { limit: 100 },
+    );
+    const items = d?.items ?? [];
+    const next = items.find((i) => i.client_id === clientId) ?? null;
+    if (next) return { next, incomplete: false };
+    if (byClient) return { next: null, incomplete: false };
+    return { next: null, incomplete: d?.truncated === true || items.length >= 100 };
+  } catch {
+    return { next: null, incomplete: true };
+  }
+}
+
+/** follow_ups_create. `due` is an ISO date (09:00 that day) or datetime. A repeat call with the same idempotency_key returns the first one. */
+export function createFollowUp(
+  input: { client_id: string; title: string; due: string; channel?: "email" | "sms" | "call" | "meeting"; note?: string },
+  idempotencyKey?: string,
+): Promise<CallResult<{ follow_up: { id: string; title: string; due_at: string }; deduped: boolean }>> {
+  return callTool("follow_ups_create", { ...input, ...(idempotencyKey ? { idempotency_key: idempotencyKey } : {}) });
+}
+
+/** follow_ups_complete: closes a reminder. Pass the id from `source_ref.id`. */
+export function completeFollowUp(clientId: string, followUpId?: string): Promise<CallResult<{ follow_up: { id: string; title: string }; completed: boolean }>> {
+  return callTool("follow_ups_complete", { client_id: clientId, ...(followUpId ? { follow_up_id: followUpId } : {}) });
 }
 
 /** The form string for a stored custom field value ("" when there is none), so inputs open on the current value. */

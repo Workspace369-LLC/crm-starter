@@ -5,11 +5,15 @@
 // Run: node scripts/mock-mcp-server.mjs   (PORT=4010 by default)
 // Then: W369_TOKEN=mock-token W369_MCP_URL=http://localhost:4010/mcp npm run dev
 // Optional: MOCK_HOLD_WRITES=1 answers every write with a held_for_approval result.
+// Optional: MOCK_NO_CLIENT_FILTER=1 makes follow_ups_list ignore client_id (it is not in its schema), like a server without the filter.
+// Optional: MOCK_OMIT_TOOLS=pipeline_summary,follow_ups_list hides tools (an older server or a scoped token), to try the feature-detect.
 import http from "node:http";
 import { randomUUID } from "node:crypto";
 
 const PORT = Number(process.env.PORT ?? 4010);
 const HOLD = process.env.MOCK_HOLD_WRITES === "1";
+const NO_CLIENT_FILTER = process.env.MOCK_NO_CLIENT_FILTER === "1";
+const OMIT = new Set((process.env.MOCK_OMIT_TOOLS ?? "").split(",").map((x) => x.trim()).filter(Boolean));
 const DAY = 86_400_000;
 const now = Date.now();
 const iso = (daysAgo) => new Date(now - daysAgo * DAY).toISOString().slice(0, 10);
@@ -48,9 +52,12 @@ const clients = new Map();
 const proposals = [];
 const invoices = [];
 const idem = new Map();
+const meta = new Map(); // client id -> { created, stageSince } (ms), for pipeline_summary
+// [created days ago, days in current stage] by seed name; others default to long-standing and 30 days
+const AGE = { "Maya Thompson": [3, 3], "Daniel Ortiz": [5, 5], "Priya Natarajan": [20, 18], "Greenline Couriers": [25, 16], "Marcus Bell": [200, 9], "Hannah Cho": [90, 4], "Olivia Reyes": [40, 2] };
 const lifecycleOf = (stageId) => (STAGES.find((s) => s.id === stageId)?.group === "lead" ? "prospect" : "client");
 
-function addClient({ name, company, email, phone, stage, source, tags, custom }) {
+function addClient({ name, company, email, phone, stage, source, tags, custom, created }) {
   const id = `cl_${randomUUID().slice(0, 8)}`;
   clients.set(id, {
     id, name, ...(email ? { email } : {}), ...(phone ? { phone } : {}), ...(company ? { company } : {}),
@@ -58,6 +65,8 @@ function addClient({ name, company, email, phone, stage, source, tags, custom })
     tags: tags ?? [], lifecycle_stage: lifecycleOf(stage), stage_id: stage, archived: false,
     email_opted_out: false, sms_opted_out: false, blacklisted: false, custom_fields: custom ?? {},
   });
+  const [made, since] = AGE[name] ?? (created ? [0, 0] : [200, 30]);
+  meta.set(id, { created: now - made * DAY, stageSince: now - since * DAY });
   return id;
 }
 for (const [name, company, email, phone, stage, source, tags, make, tier, ago, fleet] of SEED) {
@@ -83,6 +92,16 @@ inv("Northbeam Design Studio", "INV-1042", "Sent", 1240, 6, false);
 inv("Tom Gallagher", "INV-1043", "Paid", 220, 25, true);
 inv("Olivia Reyes", "INV-1044", "Sent", 90, -5, false);
 inv("Hannah Cho", "INV-1045", "Paid", 900, 60, true);
+
+// Reminders are the follow-ups this app can create and complete. Proposal chases are server-computed (not completable).
+const reminders = [];
+const remind = (client, title, inDays, channel) => reminders.push({ id: `rm_${randomUUID().slice(0, 8)}`, client_id: byName(client), title, due: now + inDays * DAY, channel, done: false });
+remind("Priya Natarajan", "Call about the ceramic quote", -2, "call");
+remind("Tom Gallagher", "Offer the member renewal", 0, "email");
+remind("Hannah Cho", "Book her 6-month ceramic check", 4, "meeting");
+const chases = new Map([[byName("Greenline Couriers"), { title: "Chase proposal: Fleet plan, 8 vans monthly", reason: "Proposal sent 4 days ago and not accepted.", type: "chase_proposal", source: "signal", source_ref: { kind: "proposal", id: "pr_chase" }, due: now - 0.5 * DAY }]]);
+const startOfToday = () => { const d = new Date(now); d.setHours(0, 0, 0, 0); return d.getTime(); };
+const groupOf = (due) => (due < startOfToday() ? "overdue" : due < startOfToday() + DAY ? "today" : due < startOfToday() + 8 * DAY ? "this_week" : null);
 
 // ---- tool wiring ---------------------------------------------------------------------------
 const ok = (structuredContent, text) => ({ structuredContent, content: [{ type: "text", text }] });
@@ -149,7 +168,7 @@ const TOOLS = {
     const cf = a.custom_fields ? resolveCustom(a.custom_fields, false) : { set: {} };
     if (cf.error) return fail(`${cf.error} No client was created.`);
     const stage = a.lifecycle_stage === "prospect" ? "lead" : "active"; // effectiveStageId() in the real server
-    const id = addClient({ name, company: a.company, email: a.email, phone: a.phone, stage, source: a.lead_source, tags: a.tags, custom: cf.set });
+    const id = addClient({ name, company: a.company, email: a.email, phone: a.phone, stage, source: a.lead_source, tags: a.tags, custom: cf.set, created: true });
     if (a.idempotency_key) idem.set(a.idempotency_key, id);
     return ok({ client: clients.get(id), deduped: false }, `Created client "${name}".`);
   } },
@@ -169,7 +188,7 @@ const TOOLS = {
     const t = resolveStage(a.stage);
     if (!t) return fail(`Unknown stage "${a.stage}". Stages: ${STAGES.map((s) => `${s.name} (${s.id})`).join(", ")}. No change was made.`);
     const from = c.stage_id, moved = from !== t.id;
-    c.stage_id = t.id; c.lifecycle_stage = lifecycleOf(t.id);
+    c.stage_id = t.id; c.lifecycle_stage = lifecycleOf(t.id); if (moved) meta.get(c.id).stageSince = Date.now();
     return ok({ client: { id: c.id, name: c.name, stage_id: t.id, stage: t.name, lifecycle_stage: c.lifecycle_stage }, previous_stage_id: from, moved },
       moved ? `Moved "${c.name}" to ${t.name}.` : `"${c.name}" is already in ${t.name}. No change was made.`);
   } },
@@ -222,6 +241,59 @@ const TOOLS = {
     return ok({ dry_run: dryRun, applied: !dryRun, stages: stagePlan, custom_fields: fieldPlan, counts, default_stages_added: false, warnings: [] },
       `${lead} ${counts.stages_to_create} stage(s) ${dryRun ? "to create" : "created"}, ${counts.stages_existing} already there; ${counts.fields_to_create} custom field(s) ${dryRun ? "to create" : "created"}, ${counts.fields_existing} already there.${tail}`);
   } },
+  pipeline_summary: { props: ["stalled_days"], run(a) {
+    const extra = strict(a, ["stalled_days"]); if (extra.length) return fail("Invalid input: `stalled_days` must be a whole number from 1 to 90.");
+    const days = a.stalled_days ?? 14;
+    if (!Number.isInteger(days) || days < 1 || days > 90) return fail("Invalid input: `stalled_days` must be a whole number from 1 to 90.");
+    const live = [...clients.values()].filter((c) => !c.archived);
+    const stalled = live.filter((c) => STAGES.find((s) => s.id === c.stage_id)?.group !== "closed" && (Date.now() - meta.get(c.id).stageSince) / DAY >= days);
+    const since = (d) => live.filter((c) => (Date.now() - meta.get(c.id).created) / DAY <= d).length;
+    return ok({
+      as_of: new Date().toISOString(),
+      stages: STAGES.map((s) => ({ id: s.id, name: s.name, group: s.group, client_count: live.filter((c) => c.stage_id === s.id).length })),
+      total_clients: live.length, unassigned_client_count: live.filter((c) => !STAGES.some((s) => s.id === c.stage_id)).length,
+      new_clients: { last_7_days: since(7), last_30_days: since(30) },
+      stalled: { days, count: stalled.length, clients: stalled.slice(0, 10).map((c) => ({ id: c.id, name: c.name })) },
+    }, `${live.length} clients across ${STAGES.length} stages; ${stalled.length} stalled for ${days}+ days.`);
+  } },
+  follow_ups_list: { get props() { return NO_CLIENT_FILTER ? ["scope", "group", "limit"] : ["scope", "group", "limit", "client_id"]; }, run(a) {
+    const extra = strict(a, this.props); if (extra.length) return fail(`Invalid input: unknown field ${extra[0]}.`);
+    const nameOf = (id) => clients.get(id)?.name ?? "";
+    const items = [];
+    for (const c of clients.values()) {
+      if (c.archived || (a.client_id && c.id !== a.client_id)) continue;
+      const mine = reminders.filter((r) => r.client_id === c.id && !r.done).sort((x, y) => x.due - y.due)[0];
+      const next = mine ? { title: mine.title, reason: `Reminder: ${mine.title}`, type: "reminder", source: "reminder", source_ref: { kind: "reminder", id: mine.id }, due: mine.due, channel: mine.channel } : chases.get(c.id);
+      const group = next && groupOf(next.due);
+      if (!next || !group) continue;
+      items.push({ client_id: c.id, client_name: nameOf(c.id), group, type: next.type, title: next.title, reason: next.reason, reasons: [next.reason], due_at: new Date(next.due).toISOString(), ...(next.channel ? { channel: next.channel } : {}), suggested: false, source: next.source, source_ref: next.source_ref });
+    }
+    const wanted = a.group === "due" ? ["overdue", "today"] : a.group ? [a.group] : null;
+    const shown = items.filter((i) => !wanted || wanted.includes(i.group)).slice(0, Math.min(Number(a.limit ?? 25), 100));
+    const counts = Object.fromEntries(["overdue", "today", "this_week", "suggested"].map((g) => [g, items.filter((i) => i.group === g).length]));
+    return ok({ items: shown, counts, time_zone: "America/Los_Angeles", truncated: shown.length < items.filter((i) => !wanted || wanted.includes(i.group)).length }, `${shown.length} follow-ups.`);
+  } },
+  follow_ups_create: { write: true, props: ["client_id", "title", "due", "note", "channel", "idempotency_key"], run(a) {
+    const extra = strict(a, this.props); if (extra.length) return fail(`Invalid input: unknown field ${extra[0]}. No change was made.`);
+    if (!a.client_id || !a.title || !a.due) return fail("Invalid input: `client_id`, `title` and `due` are required; `channel` is email, sms, call or meeting. No change was made.");
+    if (a.channel && !["email", "sms", "call", "meeting"].includes(a.channel)) return fail("Invalid input: `channel` is email, sms, call or meeting. No change was made.");
+    const c = clients.get(a.client_id); if (!c) return fail("Client not found or not in your scope.");
+    const due = /^\d{4}-\d{2}-\d{2}$/.test(a.due) ? Date.parse(`${a.due}T09:00:00`) : Date.parse(a.due);
+    if (Number.isNaN(due)) return fail("`due` must be an ISO date like 2026-11-05. No change was made.");
+    if (due < Date.now() - 60_000) return fail("`due` is in the past. No change was made.");
+    if (a.idempotency_key && idem.has(a.idempotency_key)) { const r = reminders.find((x) => x.id === idem.get(a.idempotency_key)); return ok({ follow_up: { id: r.id, client_id: c.id, client_name: c.name, title: r.title, due_at: new Date(r.due).toISOString() }, deduped: true }, "Follow-up already existed (deduped)."); }
+    const r = { id: `rm_${randomUUID().slice(0, 8)}`, client_id: c.id, title: String(a.title), due, channel: a.channel, done: false };
+    reminders.push(r); if (a.idempotency_key) idem.set(a.idempotency_key, r.id);
+    return ok({ follow_up: { id: r.id, client_id: c.id, client_name: c.name, title: r.title, due_at: new Date(due).toISOString(), ...(a.channel ? { channel: a.channel } : {}) }, deduped: false }, `Scheduled follow-up "${r.title}" for ${c.name}.`);
+  } },
+  follow_ups_complete: { write: true, props: ["client_id", "follow_up_id"], run(a) {
+    const extra = strict(a, this.props); if (extra.length || !a.client_id) return fail("Invalid input: a `client_id` is required. No change was made.");
+    const c = clients.get(a.client_id); if (!c) return fail("Client not found or not in your scope.");
+    const r = a.follow_up_id ? reminders.find((x) => x.id === a.follow_up_id && x.client_id === c.id) : reminders.filter((x) => x.client_id === c.id && !x.done).sort((x, y) => x.due - y.due)[0];
+    if (!r) return fail("That follow-up is not a reminder you can complete here. Complete it in the Workspace369 app. No change was made.");
+    r.done = true;
+    return ok({ follow_up: { id: r.id, client_id: c.id, title: r.title }, completed: true }, `Marked "${r.title}" done.`);
+  } },
   proposals_search: { props: ["clientId", "limit", "cursor"], run(a) {
     return page(proposals.filter((p) => !a.clientId || p.client_id === a.clientId), a, "proposals");
   } },
@@ -237,14 +309,14 @@ const TOOLS = {
   } },
 };
 
-const toolList = () => Object.entries(TOOLS).map(([name, t]) => ({
+const toolList = () => Object.entries(TOOLS).filter(([name]) => !OMIT.has(name)).map(([name, t]) => ({
   name, inputSchema: { type: "object", properties: Object.fromEntries(t.props.map((p) => [p, {}])) },
 }));
 
 function handle(msg) {
   if (msg.method === "tools/list") return { jsonrpc: "2.0", id: msg.id, result: { tools: toolList() } };
   if (msg.method === "tools/call") {
-    const t = TOOLS[msg.params?.name];
+    const t = OMIT.has(msg.params?.name) ? undefined : TOOLS[msg.params?.name];
     if (!t) return { jsonrpc: "2.0", id: msg.id, error: { code: -32602, message: `Unknown tool: ${msg.params?.name}` } };
     const args = msg.params.arguments ?? {};
     const result = t.write && HOLD ? held(msg.params.name) : t.run(args);

@@ -1,11 +1,14 @@
 import Link from "next/link";
-import { getCapabilities, getClientStages, listClients, type Client, type Stage } from "@/lib/crm";
+import { getCapabilities, getClientStages, getPipelineSummary, listClients, type Client, type Stage } from "@/lib/crm";
 import { MoveStage } from "./clients/forms";
+import { PipelineHeader } from "./pipeline-header";
 
 export const dynamic = "force-dynamic";
 
 export default async function Pipeline() {
   const [clients, stages, caps] = await Promise.all([listClients(), getClientStages().catch(() => null), getCapabilities()]);
+  // Hidden when pipeline_summary is not in tools/list (older server or scoped token), or the call fails.
+  const summary = caps.pipelineSummary ? await getPipelineSummary() : null;
   return (
     <>
       <div className="pagehead">
@@ -15,6 +18,7 @@ export default async function Pipeline() {
         </div>
         <Link href="/clients/new" className="btn btn-primary">New client</Link>
       </div>
+      {summary && <PipelineHeader summary={summary} />}
       {clients.length === 0 && <p className="empty">No clients yet.</p>}
       {caps.moveStage && stages && stages.length > 0 ? <StageBoard clients={clients} stages={stages} /> : <GroupBoard clients={clients} stages={stages} />}
     </>
